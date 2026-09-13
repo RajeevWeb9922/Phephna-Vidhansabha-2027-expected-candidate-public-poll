@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="hi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>फेफना 360 — जनता की पसंद 2027</title>
+<link rel="stylesheet" href="style.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+</head>
+<body>
+<header>
+  <div class="hero">
+    <img src="phephna-source.jpg" alt="फेफना 360 संदर्भ चित्र">
+    <div class="overlay">
+      <div class="eyebrow">बलिया विधानसभा चुनाव 2027</div>
+      <h1>फेफना 360</h1>
+      <h2>जनता की पसंद</h2>
+      <p>आपके अनुसार अगला विधायक कौन?</p>
+      <small>यह एक अनौपचारिक Community Poll है, आधिकारिक चुनाव परिणाम नहीं।</small>
+    </div>
+  </div>
+</header>
+
+<main>
+  <section class="intro">
+    <h3>अपनी पसंद पर टैप करके वोट करें</h3>
+    <p>एक व्यक्ति/ब्राउज़र से एक वोट। परिणाम सभी को प्रतिशत में दिखाई देंगे।</p>
+  </section>
+
+  <section id="poll"></section>
+
+  <section class="share">
+    <h3>Facebook पर शेयर करें</h3>
+    <p>इस पेज का लिंक Facebook पोस्ट में डालें। लोग लिंक खोलकर उम्मीदवार पर टैप करके वोट कर सकेंगे।</p>
+    <div class="share-row">
+      <button id="copyBtn">🔗 लिंक कॉपी करें</button>
+      <button id="fbBtn">f Facebook पर शेयर करें</button>
+    </div>
+    <div id="qr"></div>
+  </section>
+
+  <section class="status" id="status">Poll loading…</section>
+</main>
+
+<footer>
+  <b>महत्वपूर्ण:</b> यह स्वतंत्र जनमत सर्वेक्षण है। उम्मीदवारों/पार्टियों की आधिकारिक सूची या चुनाव परिणाम का दावा नहीं करता।
+</footer>
+
+<script src="app.js"></script>
+</body>
+</html>
