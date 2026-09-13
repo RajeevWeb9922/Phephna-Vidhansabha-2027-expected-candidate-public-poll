@@ -14,9 +14,11 @@ try {
     SUPABASE_URL,
     SUPABASE_PUBLISHABLE_KEY
   );
+
 } catch (error) {
   console.error("Supabase setup error:", error);
 }
+
 
 const candidates = [
   {
@@ -32,7 +34,7 @@ const candidates = [
   {
     id: 3,
     name: "केशरी नन्द त्रिपाठी",
-    info: "पूर्व चेयरमैन चितबड़ागांव नपा — बसपा"
+    info: "पूर्व चेयरमैन चितबड़ागांव — बसपा"
   },
   {
     id: 4,
@@ -51,12 +53,12 @@ const candidates = [
   },
   {
     id: 7,
-    name: "डॉक्टर शुभा देवर",
+    name: "डॉक्टर सुषमा शेखर",
     info: "पत्नी सांसद नीरज शेखर — भाजपा"
   },
   {
     id: 8,
-    name: "समग्र/संग्राम सिंह यादव",
+    name: "संग्राम सिंह यादव",
     info: "विधायक फेफना एवं पूर्व मंत्री — सपा"
   },
   {
@@ -65,6 +67,7 @@ const candidates = [
     info: "पूर्व मंत्री — भाजपा"
   }
 ];
+
 
 const pollList = document.getElementById("poll-list");
 const resultsBox = document.getElementById("results");
@@ -75,32 +78,35 @@ function renderCandidates() {
 
   if (!pollList) return;
 
-  pollList.innerHTML = candidates.map(candidate => `
-    <div class="candidate-card">
+  pollList.className = "poll-grid";
 
-      <div class="candidate-info">
-        <h3>${candidate.name}</h3>
-        <p>${candidate.info}</p>
+  pollList.innerHTML = candidates.map(candidate => `
+    
+    <div class="candidate">
+
+      <div class="name">
+        ${candidate.name}
       </div>
 
-      <button onclick="vote(${candidate.id})">
+      <div class="party">
+        ${candidate.info}
+      </div>
+
+      <button
+        type="button"
+        onclick="vote(${candidate.id})">
         वोट करें
       </button>
 
     </div>
+
   `).join("");
 }
 
 
 async function loadResults() {
 
-  if (!db) {
-    if (statusBox) {
-      statusBox.textContent =
-        "Voting service से connection नहीं हो पाया।";
-    }
-    return;
-  }
+  if (!db) return;
 
   try {
 
@@ -121,7 +127,7 @@ async function loadResults() {
     );
 
     const rows = candidates.map(candidate => ({
-      candidate,
+      candidate: candidate,
       votes: resultMap.get(candidate.id) || 0
     }));
 
@@ -130,7 +136,9 @@ async function loadResults() {
       0
     );
 
+
     if (!resultsBox) return;
+
 
     resultsBox.innerHTML = rows.map(row => {
 
@@ -138,12 +146,16 @@ async function loadResults() {
         ? ((row.votes / totalVotes) * 100).toFixed(1)
         : "0.0";
 
+
       return `
-        <div class="result-row">
 
-          <div class="result-name">
+        <div class="candidate">
 
-            <strong>${row.candidate.name}</strong>
+          <div class="result">
+
+            <span>
+              ${row.candidate.name}
+            </span>
 
             <span>
               ${row.votes} वोट – ${percent}%
@@ -152,41 +164,47 @@ async function loadResults() {
           </div>
 
           <div class="bar">
+
             <div
-              class="bar-fill"
+              class="fill"
               style="width:${percent}%">
             </div>
+
           </div>
 
         </div>
+
       `;
 
     }).join("");
 
+
     if (statusBox) {
 
       if (totalVotes === 0) {
+
         statusBox.textContent =
           "अभी कोई वोट दर्ज नहीं हुआ है।";
+
       } else {
+
         statusBox.textContent =
-          "Live results • वोट अपने आप अपडेट होते रहेंगे";
+          `कुल ${totalVotes} वोट दर्ज हुए हैं।`;
+
       }
 
     }
+
 
   } catch (error) {
 
     console.error("Results error:", error);
 
     if (resultsBox) {
+
       resultsBox.innerHTML =
         "<p>Live results अभी उपलब्ध नहीं हैं।</p>";
-    }
 
-    if (statusBox) {
-      statusBox.textContent =
-        "उम्मीदवारों की सूची तैयार है। Live results service से connection नहीं हो पाया।";
     }
 
   }
@@ -199,27 +217,39 @@ async function getUserForVote() {
     throw new Error("Voting service is not connected.");
   }
 
+
   const {
     data: sessionData,
     error: sessionError
   } = await db.auth.getSession();
 
+
   if (sessionError) {
     throw sessionError;
   }
 
-  if (sessionData && sessionData.session) {
+
+  if (
+    sessionData &&
+    sessionData.session &&
+    sessionData.session.user
+  ) {
+
     return sessionData.session.user;
+
   }
+
 
   const {
     data,
     error
   } = await db.auth.signInAnonymously();
 
+
   if (error) {
     throw error;
   }
+
 
   return data.user;
 }
@@ -230,15 +260,20 @@ async function vote(candidateId) {
   try {
 
     if (statusBox) {
+
       statusBox.textContent =
         "वोट दर्ज किया जा रहा है...";
+
     }
 
+
     const user = await getUserForVote();
+
 
     if (!user) {
       throw new Error("User session नहीं मिली।");
     }
+
 
     const { error } = await db
       .from("poll_votes")
@@ -247,98 +282,86 @@ async function vote(candidateId) {
         candidate_id: candidateId
       });
 
+
     if (error) {
 
       if (error.code === "23505") {
 
         if (statusBox) {
+
           statusBox.textContent =
-            "आप पहले ही वोट कर चुके हैं। एक व्यक्ति एक ही वोट दे सकता है।";
+            "आप इस ब्राउज़र से पहले ही वोट कर चुके हैं।";
+
         }
 
         return;
       }
 
+
       throw error;
     }
 
+
     if (statusBox) {
+
       statusBox.textContent =
         "✅ आपका वोट सफलतापूर्वक दर्ज हो गया।";
+
     }
 
+
     await loadResults();
+
 
   } catch (error) {
 
     console.error("Vote error:", error);
 
     if (statusBox) {
+
       statusBox.textContent =
         "वोट दर्ज नहीं हो पाया। कृपया थोड़ी देर बाद फिर प्रयास करें।";
+
     }
 
   }
 }
 
 
-function setupShareButtons() {
+function setupShare() {
 
-  const shareButtons =
-    document.querySelectorAll("[data-share]");
+  const copyBtn =
+    document.getElementById("copyBtn");
 
-  shareButtons.forEach(button => {
+  const fbBtn =
+    document.getElementById("fbBtn");
 
-    button.addEventListener("click", async () => {
 
-      const type = button.getAttribute("data-share");
+  if (copyBtn) {
 
-      const url = window.location.href;
+    copyBtn.addEventListener("click", async () => {
 
-      const text =
-        "फेफना 360 जनता की पसंद 2027 — अपनी पसंद के उम्मीदवार को वोट करें।";
+      try {
 
-      if (type === "facebook") {
-
-        const shareUrl =
-          "https://www.facebook.com/sharer/sharer.php?u=" +
-          encodeURIComponent(url);
-
-        window.open(
-          shareUrl,
-          "_blank",
-          "noopener,noreferrer"
+        await navigator.clipboard.writeText(
+          window.location.href
         );
 
-      } else if (type === "whatsapp") {
+        if (statusBox) {
 
-        const whatsappUrl =
-          "https://wa.me/?text=" +
-          encodeURIComponent(text + "\n" + url);
+          statusBox.textContent =
+            "✅ Link copy हो गया।";
 
-        window.open(
-          whatsappUrl,
-          "_blank",
-          "noopener,noreferrer"
-        );
+        }
 
-      } else if (type === "copy") {
+      } catch (error) {
 
-        try {
+        console.error(error);
 
-          await navigator.clipboard.writeText(url);
+        if (statusBox) {
 
-          if (statusBox) {
-            statusBox.textContent =
-              "✅ Link copy हो गया।";
-          }
-
-        } catch (error) {
-
-          if (statusBox) {
-            statusBox.textContent =
-              "Link copy नहीं हो पाया।";
-          }
+          statusBox.textContent =
+            "Link copy नहीं हो पाया।";
 
         }
 
@@ -346,7 +369,26 @@ function setupShareButtons() {
 
     });
 
-  });
+  }
+
+
+  if (fbBtn) {
+
+    fbBtn.addEventListener("click", () => {
+
+      const url =
+        "https://www.facebook.com/sharer/sharer.php?u=" +
+        encodeURIComponent(window.location.href);
+
+      window.open(
+        url,
+        "_blank",
+        "noopener,noreferrer"
+      );
+
+    });
+
+  }
 
 }
 
@@ -354,22 +396,25 @@ function setupShareButtons() {
 function setupQR() {
 
   const qrBox =
-    document.getElementById("qrcode");
+    document.getElementById("qr");
+
 
   if (!qrBox) return;
 
-  if (
-    typeof QRCode === "undefined"
-  ) {
-    return;
-  }
+  if (typeof QRCode === "undefined") return;
+
 
   qrBox.innerHTML = "";
 
+
   new QRCode(qrBox, {
+
     text: window.location.href,
-    width: 180,
-    height: 180
+
+    width: 160,
+
+    height: 160
+
   });
 
 }
@@ -377,28 +422,28 @@ function setupQR() {
 
 function startPoll() {
 
-  // सबसे पहले उम्मीदवार दिखाएँ
-  // ताकि Supabase में कोई समस्या हो तो भी page खाली न रहे।
-
   renderCandidates();
 
-  setupShareButtons();
+  setupShare();
 
   setupQR();
 
   if (statusBox) {
+
     statusBox.textContent =
       "उम्मीदवारों की सूची तैयार है।";
+
   }
 
-  // Results अलग से load होंगे।
   loadResults();
 }
 
 
 window.vote = vote;
 
+
 startPoll();
+
 
 setInterval(
   loadResults,
