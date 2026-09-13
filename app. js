@@ -1,0 +1,146 @@
+const SUPABASE_URL = "https://yzxsteytjdejiilzmogw.supabase.co";
+const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_w5LBaDPTppw80_2fUr1Zug_MPKcUtug";
+
+const { createClient } = supabase;
+const db = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
+
+const candidates = [
+  { id: 1, name: "भारती सिंह", info: "पूर्व चेयरमैन जिला पंचायत बलिया — बसपा" },
+  { id: 2, name: "बंश नारायण राय", info: "रिटायर्ड पी.सी.एस. — भाजपा" },
+  { id: 3, name: "केशरी नन्द त्रिपाठी", info: "पूर्व चेयरमैन चितबड़ागांव नपा — बसपा" },
+  { id: 4, name: "बंशीधर यादव", info: "ब्लॉक प्रमुख प्रतिनिधि सोहांव — सपा" },
+  { id: 5, name: "उपेन्द्र तिवारी", info: "पूर्व मंत्री — भाजपा" },
+  { id: 6, name: "अम्बिका चौधरी", info: "पूर्व मंत्री — सपा" },
+  { id: 7, name: "डॉक्टर शुभा देवर", info: "पत्नी सांसद नीरज शेखर — भाजपा" },
+  { id: 8, name: "समग्र/संग्राम सिंह यादव", info: "विधायक फेफना एवं पूर्व मंत्री — सपा" },
+  { id: 9, name: "नारद राय", info: "पूर्व मंत्री — भाजपा" }
+];
+
+const pollList = document.getElementById("poll-list");
+const resultsBox = document.getElementById("results");
+const statusBox = document.getElementById("status");
+
+async function startPoll() {
+  const { data, error } = await db.auth.getSession();
+
+  if (error) {
+    console.error(error);
+    return;
+  }
+
+  if (!data.session) {
+    const { error: signInError } = await db.auth.signInAnonymously();
+
+    if (signInError) {
+      console.error(signInError);
+      if (statusBox) {
+        statusBox.textContent =
+          "Voting service अभी चालू नहीं है। कृपया थोड़ी देर बाद प्रयास करें।";
+      }
+      return;
+    }
+  }
+
+  renderCandidates();
+  await loadResults();
+}
+
+function renderCandidates() {
+  if (!pollList) return;
+
+  pollList.innerHTML = candidates.map(c => `
+    <div class="candidate-card">
+      <div class="candidate-info">
+        <h3>${c.name}</h3>
+        <p>${c.info}</p>
+      </div>
+      <button onclick="vote(${c.id})">वोट करें</button>
+    </div>
+  `).join("");
+}
+
+async function vote(candidateId) {
+  if (statusBox) statusBox.textContent = "वोट जमा हो रहा है...";
+
+  const { data: userData } = await db.auth.getUser();
+  const user = userData?.user;
+
+  if (!user) {
+    if (statusBox) statusBox.textContent = "कृपया पेज को फिर से खोलें।";
+    return;
+  }
+
+  const { error } = await db
+    .from("poll_votes")
+    .insert({
+      voter_id: user.id,
+      candidate_id: candidateId
+    });
+
+  if (error) {
+    if (error.code === "23505") {
+      if (statusBox) {
+        statusBox.textContent = "आप पहले ही अपना वोट दे चुके हैं।";
+      }
+    } else {
+      console.error(error);
+      if (statusBox) {
+        statusBox.textContent = "वोट जमा नहीं हो पाया। कृपया फिर प्रयास करें।";
+      }
+    }
+    return;
+  }
+
+  if (statusBox) {
+    statusBox.textContent = "✅ आपका वोट सफलतापूर्वक दर्ज हो गया!";
+  }
+
+  await loadResults();
+}
+
+async function loadResults() {
+  const { data, error } = await db
+    .from("poll_results")
+    .select("*")
+    .order("candidate_id");
+
+  if (error) {
+    console.error(error);
+    return;
+  }
+
+  const totalVotes = data.reduce((sum, row) => sum + Number(row.votes), 0);
+
+  if (!resultsBox) return;
+
+  resultsBox.innerHTML = data.map(row => {
+    const candidate = candidates.find(c => c.id === row.candidate_id);
+    const votes = Number(row.votes);
+    const percent = totalVotes
+      ? ((votes / totalVotes) * 100).toFixed(1)
+      : "0.0";
+
+    return `
+      <div class="result-row">
+        <div class="result-name">
+          <strong>${candidate ? candidate.name : "Candidate"}</strong>
+          <span>${votes} वोट — ${percent}%</span>
+        </div>
+        <div class="bar">
+          <div class="bar-fill" style="width:${percent}%"></div>
+        </div>
+      </div>
+    `;
+  }).join("");
+
+  if (totalVotes === 0) {
+    resultsBox.innerHTML =
+      "<p>अभी कोई वोट दर्ज नहीं हुआ है।</p>";
+  }
+}
+
+window.vote = vote;
+
+startPoll();
+
+setInterval(loadResults, 30000);
